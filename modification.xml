@@ -71,6 +71,16 @@ function template_profile_steamid() {
 				]]></add>
 		</operation>
 	</file>
+	<file name="$sourcedir/Subs.php">
+		<operation>
+			<search position="after"><![CDATA[// Doing an increment?]]></search>
+			<add><![CDATA[
+		if ($val == 'NULL')
+			$type = 'raw';
+
+		]]></add>
+		</operation>
+	</file>
 	<file name="$sourcedir/Load.php">
 		<operation>
 			<search position="before"><![CDATA[pg.online_color AS post_group_color, IFNULL(pg.group_name, {string:blank_string}) AS post_group, mem.is_activated, mem.warning,]]></search>

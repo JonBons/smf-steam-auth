@@ -64,8 +64,8 @@ function template_profile_steamid() {
 		loadLanguage('SteamAuth');
 
 		echo '
-					<dt>', $txt['steam_auth_profile_label'], ': </dt>
-					<dd><a href="https://steamcommunity.com/profiles/', $context['member']['steam_id'], '">', $context['member']['steam_id'], '</a></dd>';
+					<dt>', $txt['steam_auth_profile_card_label'], ': </dt>
+					<dd><a href="https://steamcommunity.com/profiles/', $context['member']['steam_id'], '"><img src="http://steamsignature.com/card/1/', $context['member']['steam_id'], '.png" /></a></dd>';
 	};
 
 				]]></add>

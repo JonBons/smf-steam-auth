@@ -11,6 +11,7 @@ $txt['steam'] = 'Steam';
 $txt['steam_auth_canceled'] = 'User has cancelled authentication';
 $txt['steam_auth_invalid_user'] = 'Could not find a user linked to that Steam account';
 $txt['steam_auth_existing_user'] = 'That Steam account is already linked to another user';
+$txt['steam_auth_profile_card_label'] = 'Steam Profile';
 $txt['steam_auth_profile_label'] = 'Steam ID';
 $txt['steam_auth_profile_reset'] = 'reset';
 

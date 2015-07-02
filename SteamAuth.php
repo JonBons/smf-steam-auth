@@ -2,26 +2,28 @@
 // Version: 1.0: SteamAuth.php
 // Licence: ISC
 
-if (!defined('SMF'))
-	die('Hacking attempt...');
+if (!defined('SMF')) die('Hacking attempt...');
 
 function steam_auth_load_theme()
 {
 	global $context, $modSettings, $smcFunc, $sourcedir, $user_settings, $txt;
-
 	if ($context['current_action'] == 'login' && !empty($modSettings['steam_auth_api_key']))
 	{
 		loadLanguage('SteamAuth');
-
 		try
 		{
-			require_once($sourcedir . '/openid.php');
-			$openid = new LightOpenID($_SERVER['SERVER_NAME']);
+			require_once ($sourcedir . '/openid.php');
+
+			$returnURL = $_SERVER['SERVER_NAME'];
+			$returnURL = $returnURL . ( ($_SERVER['SERVER_PORT'] == "80") ? "" : (":" . $_SERVER['SERVER_PORT']) );
+
+			$openid = new LightOpenID($returnURL);
 			if (!$openid->mode)
 			{
 				if (isset($_GET['steam']))
 				{
-					$openid->identity = 'http://steamcommunity.com/openid/?l=english';    // This is forcing english because it has a weird habit of selecting a random language otherwise
+					// This is forcing english because it has a weird habit of selecting a random language otherwise
+					$openid->identity = 'http://steamcommunity.com/openid/?l=english';
 					header('Location: ' . $openid->authUrl());
 				}
 				else
@@ -30,13 +32,15 @@ function steam_auth_load_theme()
 					$context['template_layers'][] = 'steam_login';
 				}
 			}
-			elseif ($openid->mode == 'cancel')
-				$context['login_errors'] = array($txt['steam_auth_x']);
+			elseif ($openid->mode == 'cancel') $context['login_errors'] = array(
+				$txt['steam_auth_canceled']
+			);
 			else
 			{
 				if ($openid->validate())
 				{
 					$id = $openid->identity;
+
 					$ptn = "/^http:\/\/steamcommunity\.com\/openid\/id\/(7[0-9]{15,25}+)$/";
 					preg_match($ptn, $id, $matches);
 					$steamid = $matches[1];
@@ -45,73 +49,181 @@ function steam_auth_load_theme()
 						SELECT passwd, id_member, id_group, lngfile, is_activated, email_address, additional_groups, member_name, password_salt,
 							openid_uri, passwd_flood
 						FROM {db_prefix}members
-						WHERE member_name = {string:steamid}
-						LIMIT 1',
-						array(
-							'steamid' => 'steamuser-' . $steamid,
-						)
-					);
+						WHERE steam_id = {string:steamid}
+						LIMIT 1', array(
+						'steamid' => $steamid,
+					));
 
 					$user_settings = $smcFunc['db_fetch_assoc']($request);
 					$smcFunc['db_free_result']($request);
+
 					if (empty($user_settings))
 					{
-						require_once($sourcedir . '/Subs-Package.php');
-						$url = "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=$modSettings[steam_auth_api_key]&steamids=$matches[1]";
-						$json_object= fetch_web_data($url);
-						$json_decoded = json_decode($json_object);
 
-						foreach ($json_decoded->response->players as $player)
-						{
-							$regOptions = array(
-								'interface' => '',
-								'username' => 'steamuser',
-								'email' => 'steamuser-' . $steamid . '@' . $_SERVER['SERVER_NAME'],
-								'check_reserved_name' => false,
-								'check_password_strength' => false,
-								'check_email_ban' => false,
-								'send_welcome_email' => false,
-								'require' => 'nothing',
-								'extra_register_vars' => array(
-									'member_name' => 'steamuser-' . $steamid,
-									'real_name' => $player->personaname,
-									'avatar' => $player->avatarmedium,
-								),
-								'theme_vars' => array(),
-							);
-							require_once($sourcedir . '/Subs-Members.php');
-							mt_srand(time() + 1277);
-							$regOptions['password'] = generateValidationCode();
-							$regOptions['password_check'] = $regOptions['password'];
-							if (is_array($errors = registerMember($regOptions, true)))
-								$context['login_errors'] = $errors;
-						}
+						loadTemplate('SteamAuth');
+						$context['template_layers'][] = 'steam_login';
+
+						$context['login_errors'] = array(
+							$txt['steam_auth_invalid_user']
+						);
+
+					} else {
+
+						require_once($sourcedir . '/LogInOut.php');
+
+						// Check their activation status.
+						if (!checkActivation())
+							return;
+
+						DoLogin();
+
+					};
+				}
+				else 
+				{  
+					$context['login_errors'] = array(
+						$txt['error_occured']
+					);
+				}
+			}
+		}
+
+		catch(ErrorException $e)
+		{
+			$context['login_errors'] = array(
+				$e->getMessage()
+			);
+		}
+	} else if ($context['current_action'] == 'profile' && !empty($modSettings['steam_auth_api_key'])) {
+		if ($_GET['area'] == "account" && $context['user']['is_logged']) {
+
+			$request = array();
+
+			if (!empty($_GET['u'])) {
+				// Make sure the id is a number and not "I like trying to hack the database".
+				$_GET['u'] = (int) $_GET['u'];
+
+				$request = $smcFunc['db_query']('', '
+						SELECT id_member, id_group, steam_id
+						FROM {db_prefix}members
+						WHERE id_member = {int:memberid}
+						LIMIT 1', array(
+						'memberid' => $_GET['u'],
+					));
+
+				$user_settings = $smcFunc['db_fetch_assoc']($request);
+				$smcFunc['db_free_result']($request);
+
+			} else {
+
+				$request = $smcFunc['db_query']('', '
+							SELECT id_member, id_group, steam_id
+							FROM {db_prefix}members
+							WHERE id_member = {int:memberid}
+							LIMIT 1', array(
+							'memberid' => $context['user']['id'],
+						));
+
+				$user_settings = $smcFunc['db_fetch_assoc']($request);
+				$smcFunc['db_free_result']($request);
+
+			};
+
+			if (empty($user_settings['steam_id'])) {
+
+				loadLanguage('SteamAuth');
+
+				require_once ($sourcedir . '/openid.php');
+
+				$returnURL = $_SERVER['SERVER_NAME'];
+				$returnURL = $returnURL . ( ($_SERVER['SERVER_PORT'] == "80") ? "" : (":" . $_SERVER['SERVER_PORT']) );
+
+				$openid = new LightOpenID($returnURL);
+				if (!$openid->mode)
+				{
+					if (isset($_GET['steam']))
+					{
+						// This is forcing english because it has a weird habit of selecting a random language otherwise
+						$openid->identity = 'http://steamcommunity.com/openid/?l=english';
+						header('Location: ' . $openid->authUrl());
+					}
+				}
+				elseif ($openid->mode == 'cancel') $context['auth_errors'] = array(
+					$txt['steam_auth_canceled']
+				);
+				else
+				{
+					if ($openid->validate())
+					{
+						$id = $openid->identity;
+
+						$ptn = "/^http:\/\/steamcommunity\.com\/openid\/id\/(7[0-9]{15,25}+)$/";
+						preg_match($ptn, $id, $matches);
+						$steamid = $matches[1];
 
 						$request = $smcFunc['db_query']('', '
-							SELECT passwd, id_member, id_group, lngfile, is_activated, email_address, additional_groups, member_name, password_salt,
-								openid_uri, passwd_flood
+							SELECT id_member, id_group, steam_id
 							FROM {db_prefix}members
-							WHERE member_name = {string:steamid}
-							LIMIT 1',
-							array(
-								'steamid' => 'steamuser-' . $steamid,
-							)
-						);
+							WHERE steam_id = {string:steamid}
+							LIMIT 1', array(
+							'steamid' => $steamid,
+						));
 
 						$user_settings = $smcFunc['db_fetch_assoc']($request);
 						$smcFunc['db_free_result']($request);
-					}
 
-					require_once($sourcedir . '/LogInOut.php');
-					DoLogin();
-				}
-				else
-					$context['login_errors'] = array($txt['error_occured']);
-			}
-		}
-		catch (ErrorException $e)
-		{
-			$context['login_errors'] = array($e->getMessage());
+						if (empty($user_settings))
+						{
+
+							require_once($sourcedir . '/Subs.php');
+
+							updateMemberData($user_settings['member_id'], array('steam_id' => $steamid));
+
+						} else {
+
+							$context['auth_errors'] = array(
+								$txt['steam_auth_existing_user']
+							);
+
+						};
+					}
+					else 
+					{  
+						$context['auth_errors'] = array(
+							$txt['error_occured']
+						);
+					}
+				};
+
+			} else {
+
+				if (isset($_GET['resetsteamid'])) {
+
+					require_once($sourcedir . '/Subs.php');
+
+					if (allowedTo('admin_forum'))
+					{
+
+						// You must input a valid user....
+						if (empty($_GET['u']) || loadMemberData((int) $_GET['u']) === false)
+							return;
+
+						// Make sure the id is a number and not "I like trying to hack the database".
+						$_GET['u'] = (int) $_GET['u'];
+						// Load the member's contextual information!
+						if (!loadMemberContext($_GET['u']))
+							return;
+
+						// Okay, I admit it, I'm lazy.  Stupid $_GET['u'] is long and hard to type.
+						$profile = &$memberContext[$_GET['u']];
+
+						updateMemberData($profile['id'], array('steam_id' => ''));
+
+					};
+
+				};
+
+			};
 		}
 	}
 }
@@ -119,11 +231,15 @@ function steam_auth_load_theme()
 function steam_auth_general_mod_settings(&$config_vars)
 {
 	global $txt;
-
 	loadLanguage('SteamAuth');
 	$config_vars = array_merge($config_vars, array(
 		'',
-		array('text', 'steam_auth_api_key', 80, 'postinput' => $txt['steam_auth_api_key_link']),
+		array(
+			'text',
+			'steam_auth_api_key',
+			80,
+			'postinput' => $txt['steam_auth_api_key_link']
+		) ,
 	));
 }
 

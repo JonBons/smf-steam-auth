@@ -1,0 +1,141 @@
+<?xml version="1.0"?>
+<!DOCTYPE modification SYSTEM "http://www.simplemachines.org/xml/modification">
+<modification xmlns="http://www.simplemachines.org/xml/modification" xmlns:smf="http://www.simplemachines.org/">
+	<id>live627:steamauth</id>
+	<version>1.0</version>
+	<file name="$themedir/Profile.template.php">
+		<operation>
+			<search position="after"><![CDATA[function template_profile_avatar_select()]]></search>
+			<add><![CDATA[
+function template_profile_steamid() {
+	global $context, $txt, $modSettings, $scripturl;
+
+	$showLoginButton = (empty($context['member']['steam_id']) || isset($_GET['resetsteamid'])) && ($context['member']['id'] == $context['user']['id']);
+
+	$subtext = allowedTo('admin_forum') && !empty($context['member']['steam_id']) && !isset($_GET['resetsteamid']) ? '(<a href="' . $scripturl . '?action=profile;u=' . $context['member']['id'] . ';area=account;resetsteamid" style="font-style: italic;">' . $txt['steam_auth_profile_reset'] . '</a>)' : '';
+
+	if (!$showLoginButton) {
+		echo '				<dt>
+								<strong>Steam ID</strong>
+		';
+	} else {
+		echo '				<dt>
+		';
+	};
+
+	if ($subtext != '') {
+		echo '					<br>
+								<span class="smalltext">' . $subtext . '</span>
+		';
+	}
+
+	echo '					</dt>';
+
+	echo '					<dd>
+								';
+
+	if (!empty($context['member']['steam_id']) && !isset($_GET['resetsteamid'])) {
+		echo $context['member']['steam_id'];
+	} else {
+		if ($showLoginButton) {
+			echo '<input onclick="window.location=\'' . $scripturl . '?action=profile;area=account;steam\'; return false;" type="image" src="http://cdn.steamcommunity.com/public/images/signinthroughsteam/sits_large_border.png" style="background: initial; border: 0;">';
+		} else {
+			echo 'Not Set';
+		}
+	}
+
+	echo '								
+							</dd>
+	';
+
+};
+
+]]></add>
+		</operation>
+		<operation>
+			<search position="before"><![CDATA[if ($context['user']['is_owner'] || $context['user']['is_admin'])
+		echo '
+					<dt>', $txt['username'], ': </dt>
+					<dd>', $context['member']['username'], '</dd>';]]></search>
+			<add><![CDATA[
+
+	if (!empty($context['member']['steam_id']) && $context['user']['is_logged']) 
+	{
+		loadLanguage('SteamAuth');
+
+		echo '
+					<dt>', $txt['steam_auth_profile_label'], ': </dt>
+					<dd><a href="https://steamcommunity.com/profiles/', $context['member']['steam_id'], '">', $context['member']['steam_id'], '</a></dd>';
+	};
+
+				]]></add>
+		</operation>
+	</file>
+	<file name="$sourcedir/Load.php">
+		<operation>
+			<search position="before"><![CDATA[pg.online_color AS post_group_color, IFNULL(pg.group_name, {string:blank_string}) AS post_group, mem.is_activated, mem.warning,]]></search>
+			<add><![CDATA[ mem.steam_id,]]></add>
+		</operation>
+		<operation>
+			<search position="before"><![CDATA[mem.notify_types, lo.url, mg.online_color AS member_group_color, IFNULL(mg.group_name, {string:blank_string}) AS member_group,]]></search>
+			<add><![CDATA[ mem.steam_id,]]></add>
+		</operation>
+		<operation>
+			<search position="before"><![CDATA[mem.posts, mem.last_login, mem.member_ip, mem.member_ip2, mem.lngfile, mem.id_group]]></search>
+			<add><![CDATA[, mem.steam_id]]></add>
+		</operation>
+		<operation>
+			<search position="after"><![CDATA['aim' => $profile['aim'] != '' && (empty($modSettings['guest_hideContacts']) || !$user_info['is_guest']) ? array(]]></search>
+			<add><![CDATA['steam_id' => $profile['steam_id'],
+		]]></add>
+		</operation>
+	</file>
+	<file name="$sourcedir/Profile-Modify.php">
+		<operation>
+			<search position="before"><![CDATA[if (!empty($profile_fields) && !$force_reload)
+		return;]]></search>
+			<add><![CDATA[
+
+	loadLanguage('SteamAuth');
+
+	if (!empty($context['auth_errors'])) {
+		$context['auth_error_html'] = '';
+
+		foreach ($context['auth_errors'] as $error)
+			$context['auth_error_html'] = $context['auth_error_html'] . ('
+				<p class="error">' . $error . '</p>');
+	};
+
+	]]></add>
+		</operation>
+		<operation>
+			<search position="before"><![CDATA[		'aim' => array(
+			'type' => 'text',
+			'label' => $txt['aim'],
+			'subtext' => $txt['your_aim'],
+			'size' => 24,
+			'value' => strtr(empty($cur_profile['aim']) ? '' : $cur_profile['aim'], '+', ' '),
+			'permission' => 'profile_extra',
+			'input_validate' => create_function('&$value', '
+				$value = strtr($value, \' \', \'+\');
+				return true;
+			'),
+		),]]></search>
+			<add><![CDATA[
+		'steam_id' => array(				
+			'type' => 'callback',
+			'callback_func' => 'steamid',
+			'label' => $txt['steam_auth_profile_label'],
+			'subtext' => allowedTo('admin_forum') && !empty($cur_profile['steam_id']) && !isset($_GET['resetsteamid']) ? '(<a href="' . $scripturl . '?action=profile;u=' . $context['id_member'] . ';area=account;resetsteamid" style="font-style: italic;">' . $txt['steam_auth_profile_reset'] . '</a>)' : '',
+			//'enabled' => !empty($cur_profile['steam_id']),
+			'prehtml' => isset($context['auth_error_html']) ? '<div class="alert">' . $context['auth_error_html'] . '</div>' : '',
+			'log_change' => true,
+			'permission' => 'profile_identity'
+		),]]></add>
+		</operation>
+		<operation>
+			<search position="before"><![CDATA['member_name', 'real_name', 'date_registered', 'posts', 'lngfile',]]></search>
+			<add><![CDATA[ 'steam_id',]]></add>
+		</operation>
+	</file>
+</modification>

@@ -8,6 +8,7 @@
 
 	<install for="2.0 - 2.0.99">
 		<database>install.php</database>
+		<modification>modification.xml</modification>
 		<require-file name="openid.php" destination="$sourcedir" />
 		<require-file name="SteamAuth.php" destination="$sourcedir" />
 		<require-file name="SteamAuth.template.php" destination="$themedir" />
@@ -16,6 +17,7 @@
 
 	<uninstall for="2.0 - 2.0.99">
 		<code>uninstall-required.php</code>
+		<modification reverse="true">modification.xml</modification>
 		<remove-file name="$sourcedir/openid.php" />
 		<remove-file name="$sourcedir/SteamAuth.php" />
 		<remove-file name="$themedir/SteamAuth.template.php" />

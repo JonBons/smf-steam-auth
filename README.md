@@ -6,8 +6,6 @@ SMF 2.0.x
 
 This mod will allow users to login via the Steam OpenID integration (OpenID is a core SMF feature, btw, though it's buggy).
 
-User will be silently created using data obtained from Steam: player name, avatar, and date created.
-
 ##Foreword
 
 Thanks goes to:

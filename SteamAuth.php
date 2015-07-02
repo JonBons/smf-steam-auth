@@ -95,135 +95,137 @@ function steam_auth_load_theme()
 			);
 		}
 	} else if ($context['current_action'] == 'profile' && !empty($modSettings['steam_auth_api_key'])) {
-		if ($_GET['area'] == "account" && $context['user']['is_logged']) {
+		if (isset($_GET['area'])) {
+			if ($_GET['area'] == "account" && $context['user']['is_logged']) {
 
-			$request = array();
+				$request = array();
 
-			if (!empty($_GET['u'])) {
-				// Make sure the id is a number and not "I like trying to hack the database".
-				$_GET['u'] = (int) $_GET['u'];
+				if (!empty($_GET['u'])) {
+					// Make sure the id is a number and not "I like trying to hack the database".
+					$_GET['u'] = (int) $_GET['u'];
 
-				$request = $smcFunc['db_query']('', '
-						SELECT id_member, id_group, steam_id
-						FROM {db_prefix}members
-						WHERE id_member = {int:memberid}
-						LIMIT 1', array(
-						'memberid' => $_GET['u'],
-					));
-
-				$user_settings = $smcFunc['db_fetch_assoc']($request);
-				$smcFunc['db_free_result']($request);
-
-			} else {
-
-				$request = $smcFunc['db_query']('', '
+					$request = $smcFunc['db_query']('', '
 							SELECT id_member, id_group, steam_id
 							FROM {db_prefix}members
 							WHERE id_member = {int:memberid}
 							LIMIT 1', array(
-							'memberid' => $context['user']['id'],
+							'memberid' => $_GET['u'],
 						));
 
-				$user_settings = $smcFunc['db_fetch_assoc']($request);
-				$smcFunc['db_free_result']($request);
+					$user_settings = $smcFunc['db_fetch_assoc']($request);
+					$smcFunc['db_free_result']($request);
 
-			};
+				} else {
 
-			if (empty($user_settings['steam_id'])) {
+					$request = $smcFunc['db_query']('', '
+								SELECT id_member, id_group, steam_id
+								FROM {db_prefix}members
+								WHERE id_member = {int:memberid}
+								LIMIT 1', array(
+								'memberid' => $context['user']['id'],
+							));
 
-				loadLanguage('SteamAuth');
+					$user_settings = $smcFunc['db_fetch_assoc']($request);
+					$smcFunc['db_free_result']($request);
 
-				require_once ($sourcedir . '/openid.php');
-
-				$returnURL = $_SERVER['SERVER_NAME'];
-				$returnURL = $returnURL . ( ($_SERVER['SERVER_PORT'] == "80") ? "" : (":" . $_SERVER['SERVER_PORT']) );
-
-				$openid = new LightOpenID($returnURL);
-				if (!$openid->mode)
-				{
-					if (isset($_GET['steam']))
-					{
-						// This is forcing english because it has a weird habit of selecting a random language otherwise
-						$openid->identity = 'http://steamcommunity.com/openid/?l=english';
-						header('Location: ' . $openid->authUrl());
-					}
-				}
-				elseif ($openid->mode == 'cancel') $context['auth_errors'] = array(
-					$txt['steam_auth_canceled']
-				);
-				else
-				{
-					if ($openid->validate())
-					{
-						$id = $openid->identity;
-
-						$ptn = "/^http:\/\/steamcommunity\.com\/openid\/id\/(7[0-9]{15,25}+)$/";
-						preg_match($ptn, $id, $matches);
-						$steamid = $matches[1];
-
-						$request = $smcFunc['db_query']('', '
-							SELECT id_member, id_group, steam_id
-							FROM {db_prefix}members
-							WHERE steam_id = {string:steamid}
-							LIMIT 1', array(
-							'steamid' => $steamid,
-						));
-
-						$user_settings = $smcFunc['db_fetch_assoc']($request);
-						$smcFunc['db_free_result']($request);
-
-						if (empty($user_settings))
-						{
-
-							require_once($sourcedir . '/Subs.php');
-
-							updateMemberData($user_settings['member_id'], array('steam_id' => $steamid));
-
-						} else {
-
-							$context['auth_errors'] = array(
-								$txt['steam_auth_existing_user']
-							);
-
-						};
-					}
-					else 
-					{  
-						$context['auth_errors'] = array(
-							$txt['error_occured']
-						);
-					}
 				};
 
-			} else {
+				if (empty($user_settings['steam_id'])) {
 
-				if (isset($_GET['resetsteamid'])) {
+					loadLanguage('SteamAuth');
 
-					require_once($sourcedir . '/Subs.php');
+					require_once ($sourcedir . '/openid.php');
 
-					if (allowedTo('admin_forum'))
+					$returnURL = $_SERVER['SERVER_NAME'];
+					$returnURL = $returnURL . ( ($_SERVER['SERVER_PORT'] == "80") ? "" : (":" . $_SERVER['SERVER_PORT']) );
+
+					$openid = new LightOpenID($returnURL);
+					if (!$openid->mode)
 					{
+						if (isset($_GET['steam']))
+						{
+							// This is forcing english because it has a weird habit of selecting a random language otherwise
+							$openid->identity = 'http://steamcommunity.com/openid/?l=english';
+							header('Location: ' . $openid->authUrl());
+						}
+					}
+					elseif ($openid->mode == 'cancel') $context['auth_errors'] = array(
+						$txt['steam_auth_canceled']
+					);
+					else
+					{
+						if ($openid->validate())
+						{
+							$id = $openid->identity;
 
-						// You must input a valid user....
-						if (empty($_GET['u']) || loadMemberData((int) $_GET['u']) === false)
-							return;
+							$ptn = "/^http:\/\/steamcommunity\.com\/openid\/id\/(7[0-9]{15,25}+)$/";
+							preg_match($ptn, $id, $matches);
+							$steamid = $matches[1];
 
-						// Make sure the id is a number and not "I like trying to hack the database".
-						$_GET['u'] = (int) $_GET['u'];
-						// Load the member's contextual information!
-						if (!loadMemberContext($_GET['u']))
-							return;
+							$request = $smcFunc['db_query']('', '
+								SELECT id_member, id_group, steam_id
+								FROM {db_prefix}members
+								WHERE steam_id = {string:steamid}
+								LIMIT 1', array(
+								'steamid' => $steamid,
+							));
 
-						// Okay, I admit it, I'm lazy.  Stupid $_GET['u'] is long and hard to type.
-						$profile = &$memberContext[$_GET['u']];
+							$user_settings = $smcFunc['db_fetch_assoc']($request);
+							$smcFunc['db_free_result']($request);
 
-						updateMemberData($profile['id'], array('steam_id' => ''));
+							if (empty($user_settings))
+							{
+
+								require_once($sourcedir . '/Subs.php');
+
+								updateMemberData($user_settings['member_id'], array('steam_id' => $steamid));
+
+							} else {
+
+								$context['auth_errors'] = array(
+									$txt['steam_auth_existing_user']
+								);
+
+							};
+						}
+						else 
+						{  
+							$context['auth_errors'] = array(
+								$txt['error_occured']
+							);
+						}
+					};
+
+				} else {
+
+					if (isset($_GET['resetsteamid'])) {
+
+						require_once($sourcedir . '/Subs.php');
+
+						if (allowedTo('admin_forum'))
+						{
+
+							// You must input a valid user....
+							if (empty($_GET['u']) || loadMemberData((int) $_GET['u']) === false)
+								return;
+
+							// Make sure the id is a number and not "I like trying to hack the database".
+							$_GET['u'] = (int) $_GET['u'];
+							// Load the member's contextual information!
+							if (!loadMemberContext($_GET['u']))
+								return;
+
+							// Okay, I admit it, I'm lazy.  Stupid $_GET['u'] is long and hard to type.
+							$profile = &$memberContext[$_GET['u']];
+
+							updateMemberData($profile['id'], array('steam_id' => 'NULL'));
+
+						};
 
 					};
 
 				};
-
-			};
+			}
 		}
 	}
 }

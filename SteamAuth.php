@@ -98,37 +98,30 @@ function steam_auth_load_theme()
 		if (isset($_GET['area'])) {
 			if ($_GET['area'] == "account" && $context['user']['is_logged']) {
 
-				$request = array();
+				$member_id = "";
 
 				if (!empty($_GET['u'])) {
 					// Make sure the id is a number and not "I like trying to hack the database".
 					$_GET['u'] = (int) $_GET['u'];
 
-					$request = $smcFunc['db_query']('', '
-							SELECT id_member, id_group, steam_id
-							FROM {db_prefix}members
-							WHERE id_member = {int:memberid}
-							LIMIT 1', array(
-							'memberid' => $_GET['u'],
-						));
-
-					$user_settings = $smcFunc['db_fetch_assoc']($request);
-					$smcFunc['db_free_result']($request);
+					$member_id = $_GET['u'];	
 
 				} else {
 
-					$request = $smcFunc['db_query']('', '
-								SELECT id_member, id_group, steam_id
-								FROM {db_prefix}members
-								WHERE id_member = {int:memberid}
-								LIMIT 1', array(
-								'memberid' => $context['user']['id'],
-							));
-
-					$user_settings = $smcFunc['db_fetch_assoc']($request);
-					$smcFunc['db_free_result']($request);
+					$member_id = $context['user']['id'];
 
 				};
+
+				$request = $smcFunc['db_query']('', '
+						SELECT id_member, id_group, steam_id
+						FROM {db_prefix}members
+						WHERE id_member = {int:memberid}
+						LIMIT 1', array(
+						'memberid' => $member_id,
+					));
+
+				$user_settings = $smcFunc['db_fetch_assoc']($request);
+				$smcFunc['db_free_result']($request);
 
 				if (empty($user_settings['steam_id'])) {
 
@@ -178,7 +171,7 @@ function steam_auth_load_theme()
 
 								require_once($sourcedir . '/Subs.php');
 
-								updateMemberData($user_settings['member_id'], array('steam_id' => $steamid));
+								updateMemberData($member_id, array('steam_id' => $steamid));
 
 							} else {
 

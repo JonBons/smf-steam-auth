@@ -10,23 +10,23 @@ elseif (!defined('SMF'))
 
 db_extend('packages');
 
-$columns = array(
+$smcFunc['db_add_column'](
+  '{db_prefix}members',
   array(
     'name' => 'steam_id',
-    'type' => 'varchar',
     'size' => 64,
-    'null' => true,
-  ),
+    'type' => 'varchar',
+    'null' => true
+  )
 );
 
-$indexes = array(
+$smcFunc['db_add_index'](
+  '{db_prefix}members',
   array(
     'type' => 'unique',
     'columns' => array('steam_id')
-  ),
+  )
 );
-
-$smcFunc['db_create_table']('{db_prefix}members', $columns, $indexes, array(), 'overwrite');
 
 add_integration_function('integrate_pre_include', '$sourcedir/SteamAuth.php');
 add_integration_function('integrate_load_theme', 'steam_auth_load_theme');

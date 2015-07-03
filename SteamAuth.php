@@ -7,6 +7,7 @@ if (!defined('SMF')) die('Hacking attempt...');
 function steam_auth_load_theme()
 {
 	global $context, $modSettings, $smcFunc, $sourcedir, $user_settings, $txt;
+	
 	if ($context['current_action'] == 'login' && !empty($modSettings['steam_auth_api_key']))
 	{
 		loadLanguage('SteamAuth');
@@ -25,11 +26,6 @@ function steam_auth_load_theme()
 					// This is forcing english because it has a weird habit of selecting a random language otherwise
 					$openid->identity = 'http://steamcommunity.com/openid/?l=english';
 					header('Location: ' . $openid->authUrl());
-				}
-				else
-				{
-					loadTemplate('SteamAuth');
-					$context['template_layers'][] = 'steam_login';
 				}
 			}
 			elseif ($openid->mode == 'cancel') $context['login_errors'] = array(
@@ -59,9 +55,6 @@ function steam_auth_load_theme()
 
 					if (empty($user_settings))
 					{
-
-						loadTemplate('SteamAuth');
-						$context['template_layers'][] = 'steam_login';
 
 						$context['login_errors'] = array(
 							$txt['steam_auth_invalid_user']

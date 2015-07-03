@@ -1,8 +1,34 @@
 <?xml version="1.0"?>
 <!DOCTYPE modification SYSTEM "http://www.simplemachines.org/xml/modification">
 <modification xmlns="http://www.simplemachines.org/xml/modification" xmlns:smf="http://www.simplemachines.org/">
-	<id>live627:steamauth</id>
+	<id>jonbons:steamauth</id>
 	<version>1.0</version>
+	<file name="$themedir/Login.template.php">
+		<operation>
+			<search position="after"><![CDATA[// Focus on the correct input - username or password.]]></search>
+			<add><![CDATA[
+	if (!empty($modSettings['steam_auth_api_key']))
+	{
+		loadLanguage('SteamAuth');
+		loadTemplate('SteamAuth');
+		$context['template_layers'][] = 'steam_login';
+	};
+
+	]]></add>
+		</operation>
+		<operation>
+			<search position="after"><![CDATA[// Do the focus thing...]]></search>
+			<add><![CDATA[
+	if (!empty($modSettings['steam_auth_api_key']))
+	{
+		loadLanguage('SteamAuth');
+		loadTemplate('SteamAuth');
+		$context['template_layers'][] = 'steam_login';
+	};
+
+	]]></add>
+		</operation>
+	</file>
 	<file name="$themedir/Profile.template.php">
 		<operation>
 			<search position="after"><![CDATA[function template_profile_avatar_select()]]></search>
@@ -10,43 +36,47 @@
 function template_profile_steamid() {
 	global $context, $txt, $modSettings, $scripturl;
 
-	$showLoginButton = (empty($context['member']['steam_id']) || isset($_GET['resetsteamid'])) && ($context['member']['id'] == $context['user']['id']);
+	if (!empty($modSettings['steam_auth_api_key'])) {
 
-	$subtext = allowedTo('admin_forum') && !empty($context['member']['steam_id']) && !isset($_GET['resetsteamid']) ? '(<a href="' . $scripturl . '?action=profile;u=' . $context['member']['id'] . ';area=account;resetsteamid" style="font-style: italic;">' . $txt['steam_auth_profile_reset'] . '</a>)' : '';
+		$showLoginButton = (empty($context['member']['steam_id']) || isset($_GET['resetsteamid'])) && ($context['member']['id'] == $context['user']['id']);
 
-	if (!$showLoginButton) {
-		echo '				<dt>
-								<strong>Steam ID</strong>
-		';
-	} else {
-		echo '				<dt>
-		';
-	};
+		$subtext = allowedTo('admin_forum') && !empty($context['member']['steam_id']) && !isset($_GET['resetsteamid']) ? '(<a href="' . $scripturl . '?action=profile;u=' . $context['member']['id'] . ';area=account;resetsteamid" style="font-style: italic;">' . $txt['steam_auth_profile_reset'] . '</a>)' : '';
 
-	if ($subtext != '') {
-		echo '					<br>
-								<span class="smalltext">' . $subtext . '</span>
-		';
-	}
-
-	echo '					</dt>';
-
-	echo '					<dd>
-								';
-
-	if (!empty($context['member']['steam_id']) && !isset($_GET['resetsteamid'])) {
-		echo $context['member']['steam_id'];
-	} else {
-		if ($showLoginButton) {
-			echo '<input onclick="window.location=\'' . $scripturl . '?action=profile;area=account;steam\'; return false;" type="image" src="http://cdn.steamcommunity.com/public/images/signinthroughsteam/sits_large_border.png" style="background: initial; border: 0;">';
+		if (!$showLoginButton) {
+			echo '				<dt>
+									<strong>Steam ID</strong>
+			';
 		} else {
-			echo 'Not Set';
-		}
-	}
+			echo '				<dt>
+			';
+		};
 
-	echo '								
-							</dd>
-	';
+		if ($subtext != '') {
+			echo '					<br>
+									<span class="smalltext">' . $subtext . '</span>
+			';
+		}
+
+		echo '					</dt>';
+
+		echo '					<dd>
+									';
+
+		if (!empty($context['member']['steam_id']) && !isset($_GET['resetsteamid'])) {
+			echo $context['member']['steam_id'];
+		} else {
+			if ($showLoginButton) {
+				echo '<input onclick="window.location=\'' . $scripturl . '?action=profile;area=account;steam\'; return false;" type="image" src="http://cdn.steamcommunity.com/public/images/signinthroughsteam/sits_large_border.png" style="background: initial; border: 0;">';
+			} else {
+				echo 'Not Set';
+			}
+		}
+
+		echo '								
+								</dd>
+		';
+
+	};
 
 };
 
@@ -59,7 +89,7 @@ function template_profile_steamid() {
 					<dd>', $context['member']['username'], '</dd>';]]></search>
 			<add><![CDATA[
 
-	if (!empty($context['member']['steam_id']) && $context['user']['is_logged']) 
+	if (!empty($context['member']['steam_id']) && $context['user']['is_logged'] && !empty($modSettings['steam_auth_api_key'])) 
 	{
 		loadLanguage('SteamAuth');
 

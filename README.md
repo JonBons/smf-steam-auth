@@ -5,7 +5,7 @@ Fork of live627's smf-steam-auth modifcation made into working order and changed
 
 ## Changes to fork
 - Added unique constrained steam_id column to members table for tracking data.
-- Made the loading of the Steam login button be handled by Profile and Login templates via modifications.xml.
+- Made the loading of the Steam login button be handled by Profile and Login templates via modification.xml.
 - Added support for allowing an admin to reset (remove) the Steam account linked to a user.
 
 ## Reqiurements

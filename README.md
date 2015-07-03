@@ -1,6 +1,13 @@
 # Steam Authentication
 Login using your Steam account
 
+Fork of live627's smf-steam-auth modifcation made into working order and changed behaviour to no longer create users if user with steam id was not found.
+
+## Changes to fork
+- Added unique constrained steam_id column to members table for tracking data.
+- Made the loading of the Steam login button be handled by Profile and Login templates.
+- Added support for allowing an admin to reset (remove) the Steam account linked to a user.
+
 ## Reqiurements
 SMF 2.0.x
 

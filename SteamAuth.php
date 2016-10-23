@@ -201,10 +201,7 @@ function steam_auth_load_theme()
 							if (!loadMemberContext($_GET['u']))
 								return;
 
-							// Okay, I admit it, I'm lazy.  Stupid $_GET['u'] is long and hard to type.
-							$profile = &$memberContext[$_GET['u']];
-
-							updateMemberData($profile['id'], array('steam_id' => 'NULL'));
+							updateMemberData($_GET['u'], array('steam_id' => 'NULL'));
 
 						};
 
